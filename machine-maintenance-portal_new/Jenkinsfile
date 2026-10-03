@@ -38,10 +38,9 @@ pipeline {
             }
         }
 
-               stage('Deploy') {
+         stage('Deploy') {
             steps {
                 powershell '''
-                    $ErrorActionPreference = "Stop"
                     $deployDir = ($env:DEPLOY_DIR -replace '/', '\\')
                     $port = [int]$env:APP_PORT
                     New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
@@ -57,26 +56,27 @@ pipeline {
                     $jar = Get-ChildItem "$env:WORKSPACE/$env:APP_DIR/target/*.jar" | Where-Object { $_.Name -notlike "*.original" } | Select-Object -First 1
                     Copy-Item $jar.FullName "$deployDir\\machine-portal.jar" -Force
 
-                    # 3. Write a small start script (carries the settings into the app)
+                    # 3. Write the start script
                     if ($env:JAVA_HOME) { $javaExe = "$env:JAVA_HOME\\bin\\java.exe" } else { $javaExe = (Get-Command java).Source }
                     $lines = @(
                         "@echo off",
+                        "cd /d `"$deployDir`"",
                         "set DB_URL=$env:DB_URL",
                         "`"$javaExe`" -jar `"$deployDir\\machine-portal.jar`" --server.port=$port > `"$deployDir\\app.log`" 2>&1"
                     )
                     Set-Content -Path "$deployDir\\run.bat" -Value $lines -Encoding ASCII
 
-                    # 4. Launch it detached from Jenkins (so the step can finish)
-                    Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
-                        CommandLine      = "cmd.exe /c `"$deployDir\\run.bat`""
-                        CurrentDirectory = $deployDir
-                    } | Out-Null
+                    # 4. Register and start a Windows Scheduled Task (runs independently of Jenkins)
+                    $taskName = "MachinePortal-$port"
+                    & schtasks.exe /Create /TN $taskName /TR "$deployDir\\run.bat" /SC ONSTART /RU SYSTEM /RL HIGHEST /F | Out-Null
+                    if ($LASTEXITCODE -ne 0) { Write-Host "Could not create scheduled task"; exit 1 }
+                    & schtasks.exe /Run /TN $taskName | Out-Null
+                    if ($LASTEXITCODE -ne 0) { Write-Host "Could not start scheduled task"; exit 1 }
 
                     Write-Host "Started application on port $port using DB $env:DB_URL"
                 '''
             }
         }
-
         stage('Health Check') {
             steps {
                 powershell '''
