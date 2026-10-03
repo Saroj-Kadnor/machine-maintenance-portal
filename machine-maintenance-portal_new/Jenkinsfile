@@ -40,10 +40,9 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+                stage('Deploy') {
             steps {
                 powershell '''
-                    $ErrorActionPreference = "Stop"
                     if (-not $env:APP_PORT) { $env:APP_PORT = "8081" }
                     $port = [int]$env:APP_PORT
                     if ($port -lt 1) { Write-Host "Invalid port"; exit 1 }
@@ -52,8 +51,8 @@ pipeline {
                     New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
                     $taskName = "MachinePortal-$port"
 
-                    # 1. Stop the old version of THIS port only (task + java process)
-                    & schtasks.exe /End /TN $taskName 2>&1 | Out-Null
+                    # 1. Stop the old version of THIS port only (ignore "task not found")
+                    cmd /c "schtasks.exe /End /TN $taskName >nul 2>&1"
                     Get-CimInstance Win32_Process -Filter "Name='java.exe'" |
                         Where-Object { $_.CommandLine -like "*machine-portal.jar*--server.port=$port*" } |
                         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
@@ -74,12 +73,13 @@ pipeline {
                     Set-Content -Path "$deployDir\\run.bat" -Value $lines -Encoding ASCII
 
                     # 4. Register and start a Windows Scheduled Task (independent of Jenkins)
-                    & schtasks.exe /Create /TN $taskName /TR "$deployDir\\run.bat" /SC ONSTART /RU SYSTEM /RL HIGHEST /F | Out-Null
+                    cmd /c "schtasks.exe /Create /TN $taskName /TR `"$deployDir\\run.bat`" /SC ONSTART /RU SYSTEM /RL HIGHEST /F"
                     if ($LASTEXITCODE -ne 0) { Write-Host "Could not create scheduled task"; exit 1 }
-                    & schtasks.exe /Run /TN $taskName | Out-Null
+                    cmd /c "schtasks.exe /Run /TN $taskName"
                     if ($LASTEXITCODE -ne 0) { Write-Host "Could not start scheduled task"; exit 1 }
 
                     Write-Host "Started application on port $port using DB $env:DB_URL"
+                    exit 0
                 '''
             }
         }
