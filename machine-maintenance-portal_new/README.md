@@ -1,9 +1,10 @@
 # machine-maintenance-portal1
 # Dockerized Machine Maintenance Portal
 
-A web-based **Machine Maintenance Portal** developed using Java, Spring Boot, Maven, Spring Data JPA, and MySQL. The system helps manage machine records and track their maintenance status.
+A web-based Machine Maintenance Portal developed using Java, Spring Boot, Maven, Spring Data JPA, and MySQL. The system helps manage machine records and track their maintenance status.
 
 ## Features
+important features
 
 * Create machine records
 * View machine records
