@@ -11,8 +11,6 @@ pipeline {
     environment {
         APP_DIR    = 'machine-maintenance-portal_new'
         DEPLOY_DIR = 'C:/deploy/machine-portal'
-        APP_PORT   = "${params.DEPLOY_PORT ?: '8081'}"
-        DB_URL     = "${params.DB_URL ?: 'jdbc:mysql://localhost:3306/machine_maintenance'}"
     }
 
     stages {
@@ -39,72 +37,53 @@ pipeline {
                 archiveArtifacts artifacts: "${env.APP_DIR}/target/*.jar", fingerprint: true
             }
         }
+
         stage('Deploy') {
             steps {
-                powershell '''
-                    if (-not $env:APP_PORT) { $env:APP_PORT = "8081" }
-                    $port = [int]$env:APP_PORT
-                    if ($port -lt 1) { Write-Host "Invalid port"; exit 1 }
+                // These two variables stop Jenkins killing the app when the build finishes
+                withEnv(['JENKINS_NODE_COOKIE=dontKillMe', 'BUILD_ID=dontKillMe']) {
+                    powershell '''
+                        $ErrorActionPreference = "Stop"
+                        $deployDir = $env:DEPLOY_DIR
+                        $port = $env:DEPLOY_PORT
+                        New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
 
-                    $deployDir = ($env:DEPLOY_DIR -replace '/', '\\')
-                    New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
-                    $taskName = "MachinePortal-$port"
-                    $jarName  = "machine-portal-$port.jar"
-                    $logFile  = "app-$port.log"
-                    $batFile  = "run-$port.bat"
+                        # 1. Stop the old version if it is running on this port
+                        $old = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+                        if ($old) {
+                            $old | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+                            Start-Sleep -Seconds 3
+                        }
 
-                    # 1. Stop the old version of THIS port (and any leftover from the old naming)
-                    cmd /c "schtasks.exe /End /TN $taskName >nul 2>&1"
-                    Get-CimInstance Win32_Process -Filter "Name='java.exe'" |
-                        Where-Object { $_.CommandLine -like "*$jarName*" -or $_.CommandLine -like "*machine-portal.jar*" } |
-                        ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
-                    Start-Sleep -Seconds 3
+                        # 2. Copy the new jar into the deploy folder
+                        $jar = Get-ChildItem "$env:WORKSPACE/$env:APP_DIR/target/*.jar" | Select-Object -First 1
+                        Copy-Item $jar.FullName "$deployDir/machine-portal.jar" -Force
 
-                    # 2. Copy the new jar into the deploy folder
-                    $jar = Get-ChildItem "$env:WORKSPACE/$env:APP_DIR/target/*.jar" | Where-Object { $_.Name -notlike "*.original" } | Select-Object -First 1
-                    Copy-Item $jar.FullName "$deployDir\\$jarName" -Force
-
-                    # 3. Write the start script
-                    if ($env:JAVA_HOME) { $javaExe = "$env:JAVA_HOME\\bin\\java.exe" } else { $javaExe = (Get-Command java).Source }
-                    $lines = @(
-                        "@echo off",
-                        "cd /d `"$deployDir`"",
-                        "set DB_URL=$env:DB_URL",
-                        "`"$javaExe`" -jar `"$deployDir\\$jarName`" --server.port=$port > `"$deployDir\\$logFile`" 2>&1"
-                    )
-                    Set-Content -Path "$deployDir\\$batFile" -Value $lines -Encoding ASCII
-
-                    # 4. Register and start a Windows Scheduled Task (independent of Jenkins)
-                    cmd /c "schtasks.exe /Create /TN $taskName /TR `"$deployDir\\$batFile`" /SC ONSTART /RU SYSTEM /RL HIGHEST /F"
-                    if ($LASTEXITCODE -ne 0) { Write-Host "Could not create scheduled task"; exit 1 }
-                    cmd /c "schtasks.exe /Run /TN $taskName"
-                    if ($LASTEXITCODE -ne 0) { Write-Host "Could not start scheduled task"; exit 1 }
-
-                    Write-Host "Started application on port $port using DB $env:DB_URL"
-                    exit 0
-                '''
+                        # 3. Start it in the background
+                        if ($env:JAVA_HOME) { $javaExe = "$env:JAVA_HOME/bin/java.exe" } else { $javaExe = "java" }
+                        Start-Process -FilePath $javaExe `
+                            -ArgumentList "-jar", "$deployDir/machine-portal.jar", "--server.port=$port" `
+                            -WorkingDirectory $deployDir -WindowStyle Hidden `
+                            -RedirectStandardOutput "$deployDir/app.log" `
+                            -RedirectStandardError "$deployDir/app-error.log"
+                        Write-Host "Started application on port $port using DB $env:DB_URL"
+                    '''
+                }
             }
         }
 
         stage('Health Check') {
             steps {
                 powershell '''
-                    if (-not $env:APP_PORT) { $env:APP_PORT = "8081" }
-                    $url = "http://localhost:$($env:APP_PORT)/login"
-                    $log = ($env:DEPLOY_DIR -replace '/', '\\') + "\\app-$($env:APP_PORT).log"
+                    $url = "http://localhost:$($env:DEPLOY_PORT)/login"
                     $ok = $false
                     for ($i = 1; $i -le 30; $i++) {
                         try {
-                            $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 2
+                            $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 3
                             if ($r.StatusCode -eq 200) { $ok = $true; break }
-                        } catch { }
-                        Start-Sleep -Seconds 3
+                        } catch { Start-Sleep -Seconds 3 }
                     }
-                    if (-not $ok) {
-                        Write-Host "Application did not start in time. Last lines of $log :"
-                        if (Test-Path $log) { Get-Content $log -Tail 40 }
-                        exit 1
-                    }
+                    if (-not $ok) { Write-Host "Application did not start in time"; exit 1 }
                     Write-Host "Application is UP at $url"
                 '''
             }
