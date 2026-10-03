@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Machines')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('machines')}"></aside>
+
+    <main class="content">
+        <h1 class="page-title">Machine Management</h1>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+
+        <div class="panel">
+            <div class="toolbar">
+                <form th:action="@{/machines}" method="get" class="filters">
+                    <input type="text" id="search" name="search" th:value="${search}"
+                           placeholder="Search name, code, type, location...">
+
+                    <select name="status">
+                        <option value="">All statuses</option>
+                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"
+                                th:selected="${s == status}"></option>
+                    </select>
+
+                    <select name="type">
+                        <option value="">All types</option>
+                        <option th:each="t : ${types}" th:value="${t}" th:text="${t}"
+                                th:selected="${t == type}"></option>
+                    </select>
+
+                    <select name="location">
+                        <option value="">All locations</option>
+                        <option th:each="l : ${locations}" th:value="${l}" th:text="${l}"
+                                th:selected="${l == location}"></option>
+                    </select>
+
+                    <button type="submit" id="search-btn" class="btn">Search</button>
+                    <a th:href="@{/machines}" class="btn btn-secondary">Reset</a>
+                </form>
+
+                <a th:href="@{/machines/add}" id="add-machine-btn" class="btn" th:if="${canManage}">+ Add Machine</a>
+            </div>
+
+            <table th:if="${not #lists.isEmpty(machines)}" id="machines-table">
+                <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Manufacturer</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="machine : ${machines}">
+                    <td th:text="${machine.machineCode}"></td>
+                    <td><a th:href="@{/machines/{id}(id=${machine.id})}" th:text="${machine.machineName}"></a></td>
+                    <td th:text="${machine.machineType}"></td>
+                    <td th:text="${machine.location}"></td>
+                    <td th:text="${machine.manufacturer}"></td>
+                    <td><span class="badge" th:classappend="${'st-' + machine.status}" th:text="${machine.status}"></span></td>
+                    <td class="actions">
+                        <a th:href="@{/machines/{id}(id=${machine.id})}" class="btn btn-sm btn-secondary">View</a>
+                        <a th:href="@{/machines/edit/{id}(id=${machine.id})}" class="btn btn-sm" th:if="${canManage}">Edit</a>
+                        <form th:action="@{/machines/delete/{id}(id=${machine.id})}" method="post" class="inline"
+                              th:if="${isAdmin}" onsubmit="return confirm('Delete this machine?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="empty" th:if="${#lists.isEmpty(machines)}">No machines found.</div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

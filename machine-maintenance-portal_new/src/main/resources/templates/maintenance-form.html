@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Maintenance Request')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('maintenance')}"></aside>
+
+    <main class="content">
+        <h1 class="page-title" th:text="${editMode} ? 'Update Maintenance Request' : 'New Maintenance Request'">Request</h1>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+
+        <div class="panel form-panel">
+            <p class="hint" th:if="${fullEdit}"><span class="req">*</span> Required field</p>
+            <form th:action="${editMode} ? @{/maintenance/update} : @{/maintenance/save}"
+                  method="post" th:object="${maintenance}">
+
+                <input type="hidden" th:field="*{id}">
+
+                <p class="hint" th:if="${editMode and !fullEdit}">
+                    As a technician you can update the status and remarks of your assigned requests.
+                </p>
+
+                <label for="machineId">Machine <span class="req">*</span></label>
+                <select id="machineId" th:field="*{machineId}" th:disabled="${!fullEdit}" required>
+                    <option value="">Select machine</option>
+                    <option th:each="mc : ${machines}" th:value="${mc.id}"
+                            th:text="${mc.machineCode + ' - ' + mc.machineName}"></option>
+                </select>
+
+                <label for="description">Problem / Description <span class="req">*</span></label>
+                <textarea id="description" th:field="*{description}" th:disabled="${!fullEdit}"
+                          placeholder="Describe the maintenance problem..." required></textarea>
+
+                <label for="priority">Priority <span class="req">*</span></label>
+                <select id="priority" th:field="*{priority}" th:disabled="${!fullEdit}" required>
+                    <option th:each="p : ${priorities}" th:value="${p}" th:text="${p}"></option>
+                </select>
+
+                <label for="assignedTo">Assigned Technician <span class="req">*</span></label>
+                <select id="assignedTo" th:field="*{assignedTo}" th:disabled="${!fullEdit}" required>
+                    <option value="">Select technician</option>
+                    <option th:if="${legacyAssignee != null}" th:value="${legacyAssignee}"
+                            th:text="${legacyAssignee + ' (legacy)'}"></option>
+                    <option th:each="t : ${technicians}" th:value="${t.username}"
+                            th:text="${t.fullName + ' (' + t.username + ')'}"></option>
+                </select>
+
+                <label for="dueDate">Due Date <span class="req">*</span></label>
+                <input type="date" id="dueDate" th:field="*{dueDate}" th:disabled="${!fullEdit}" required>
+
+                <div th:if="${editMode}">
+                    <label for="status">Status</label>
+                    <select id="status" th:field="*{status}">
+                        <option th:each="s : ${statusOptions}" th:value="${s}" th:text="${s}"></option>
+                    </select>
+                    <div class="hint">Only valid next steps are listed: PENDING → IN_PROGRESS → COMPLETED (PENDING can also be CANCELLED).</div>
+                </div>
+
+                <label for="remarks">Remarks</label>
+                <textarea id="remarks" th:field="*{remarks}"></textarea>
+
+                <div class="form-actions">
+                    <button type="submit" id="save-maintenance-btn" class="btn"
+                            th:text="${editMode} ? 'Update Request' : 'Create Request'">Save</button>
+                    <a th:href="@{/maintenance}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Login')}"></head>
+<body>
+<div class="login-wrap">
+    <div class="login-box">
+        <h1>🏭 Machine Maintenance Portal</h1>
+        <p>Please sign in to continue.</p>
+
+        <div class="alert error" th:if="${param.error}">Invalid username or password.</div>
+        <div class="alert success" th:if="${param.logout}">You have been logged out.</div>
+
+        <form th:action="@{/login}" method="post">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required autofocus>
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit" id="login-btn" class="btn">Sign in</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

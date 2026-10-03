@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Machine Details')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('machines')}"></aside>
+
+    <main class="content">
+        <h1 class="page-title" th:text="${machine.machineCode + ' - ' + machine.machineName}">Machine</h1>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+
+        <div class="panel">
+            <dl class="detail-grid">
+                <dt>Machine Code</dt><dd th:text="${machine.machineCode}"></dd>
+                <dt>Name</dt><dd th:text="${machine.machineName}"></dd>
+                <dt>Type</dt><dd th:text="${machine.machineType}"></dd>
+                <dt>Location</dt><dd th:text="${machine.location}"></dd>
+                <dt>Manufacturer</dt><dd th:text="${machine.manufacturer}"></dd>
+                <dt>Model</dt><dd th:text="${machine.model}"></dd>
+                <dt>Installation Date</dt><dd th:text="${machine.installationDate}"></dd>
+                <dt>Status</dt>
+                <dd><span class="badge" th:classappend="${'st-' + machine.status}" th:text="${machine.status}"></span></dd>
+                <dt>Description</dt><dd th:text="${machine.description}"></dd>
+            </dl>
+
+            <div class="form-actions">
+                <a th:href="@{/machines/edit/{id}(id=${machine.id})}" class="btn" th:if="${canManage}">Edit</a>
+                <a th:href="@{/maintenance/add(machineId=${machine.id})}" class="btn btn-success" th:if="${canManage}">+ Report maintenance</a>
+                <a th:href="@{/machines}" class="btn btn-secondary" th:unless="${isTechnician}">← Back</a>
+                <a th:href="@{/maintenance}" class="btn btn-secondary" th:if="${isTechnician}">← Back to my jobs</a>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2 th:text="${isTechnician} ? 'My Jobs on this Machine' : 'Maintenance History'">Maintenance History</h2>
+            <table th:if="${not #lists.isEmpty(history)}">
+                <thead><tr><th>ID</th><th>Problem</th><th>Priority</th><th>Technician</th><th>Status</th><th>Created</th></tr></thead>
+                <tbody>
+                <tr th:each="m : ${history}">
+                    <td><a th:href="@{/maintenance/{id}(id=${m.id})}" th:text="'#' + ${m.id}"></a></td>
+                    <td th:text="${m.description}"></td>
+                    <td><span class="badge" th:classappend="${'pr-' + m.priority}" th:text="${m.priority}"></span></td>
+                    <td th:text="${m.assignedTo}"></td>
+                    <td><span class="badge" th:classappend="${'st-' + m.status}" th:text="${m.status}"></span></td>
+                    <td th:text="${#temporals.format(m.createdDate, 'dd MMM yyyy')}"></td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="empty" th:if="${#lists.isEmpty(history)}">No maintenance recorded for this machine.</div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Machine')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('machines')}"></aside>
+
+    <main class="content">
+        <h1 class="page-title" th:text="${editMode} ? 'Edit Machine' : 'Add Machine'">Machine</h1>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+
+        <div class="panel form-panel">
+            <p class="hint"><span class="req">*</span> Required field</p>
+            <form th:action="@{/machines/save}" method="post" th:object="${machine}">
+
+                <input type="hidden" th:field="*{id}">
+
+                <label for="machineCode">Machine Code <span class="req">*</span></label>
+                <input type="text" id="machineCode" th:field="*{machineCode}" placeholder="MC-001" required>
+
+                <label for="machineName">Machine Name <span class="req">*</span></label>
+                <input type="text" id="machineName" th:field="*{machineName}" placeholder="CNC Machine 01" required>
+
+                <label for="machineType">Machine Type <span class="req">*</span></label>
+                <input type="text" id="machineType" th:field="*{machineType}" placeholder="CNC" required>
+
+                <label for="location">Location <span class="req">*</span></label>
+                <input type="text" id="location" th:field="*{location}" placeholder="Production Floor A" required>
+
+                <label for="manufacturer">Manufacturer</label>
+                <input type="text" id="manufacturer" th:field="*{manufacturer}" placeholder="Siemens">
+
+                <label for="model">Model</label>
+                <input type="text" id="model" th:field="*{model}" placeholder="CNC-X200">
+
+                <label for="installationDate">Installation Date</label>
+                <input type="date" id="installationDate" th:field="*{installationDate}" th:max="${today}">
+                <div class="hint">Future dates are not allowed.</div>
+
+                <label for="status">Status <span class="req">*</span></label>
+                <select id="status" th:field="*{status}" required>
+                    <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"></option>
+                </select>
+
+                <label for="description">Description</label>
+                <textarea id="description" th:field="*{description}"></textarea>
+
+                <div class="form-actions">
+                    <button type="submit" id="save-machine-btn" class="btn">Save Machine</button>
+                    <a th:href="@{/machines}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

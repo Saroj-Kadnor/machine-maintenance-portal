@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('dashboard')}"></aside>
+
+    <main class="content">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="welcome" th:text="'Welcome back, ' + ${displayName}">Welcome back</p>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+
+        <!-- ======================================================= -->
+        <!--  ADMIN / MANAGER DASHBOARD                               -->
+        <!-- ======================================================= -->
+        <th:block th:unless="${isTechnician}">
+
+            <div class="kpis">
+                <div class="kpi"><div class="icon ic-blue">🏭</div>
+                    <div><div class="num" id="stat-machines" th:text="${totalMachines}">0</div><div class="lbl">Total machines</div></div></div>
+                <div class="kpi"><div class="icon ic-amber">🔧</div>
+                    <div><div class="num" id="stat-open" th:text="${open}">0</div><div class="lbl">Open requests</div></div></div>
+                <div class="kpi"><div class="icon ic-red">🚨</div>
+                    <div><div class="num" th:text="${critical}">0</div><div class="lbl">Critical (open)</div></div></div>
+                <div class="kpi"><div class="icon ic-green">✅</div>
+                    <div><div class="num" th:text="${completionRate} + '%'">0%</div><div class="lbl">Completion rate</div></div></div>
+            </div>
+
+            <div class="grid-3">
+                <!-- Maintenance status donut -->
+                <div class="panel">
+                    <h3 class="chart-title">Maintenance status</h3>
+                    <div class="donut-wrap">
+                        <div class="donut" th:style="'background:' + ${maintenanceDonut}">
+                            <div class="donut-center">
+                                <span class="big" id="stat-maintenance" th:text="${totalMaintenance}">0</span>
+                                <span class="small">requests</span>
+                            </div>
+                        </div>
+                        <ul class="legend">
+                            <li><span class="dot" style="background:#f59e0b"></span>Pending<span class="cnt" th:text="${pending}">0</span></li>
+                            <li><span class="dot" style="background:#3b82f6"></span>In progress<span class="cnt" th:text="${inProgress}">0</span></li>
+                            <li><span class="dot" style="background:#22c55e"></span>Completed<span class="cnt" th:text="${completed}">0</span></li>
+                            <li><span class="dot" style="background:#9ca3af"></span>Cancelled<span class="cnt" th:text="${cancelled}">0</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Machine status donut -->
+                <div class="panel">
+                    <h3 class="chart-title">Machine status</h3>
+                    <div class="donut-wrap">
+                        <div class="donut" th:style="'background:' + ${machineDonut}">
+                            <div class="donut-center">
+                                <span class="big" th:text="${totalMachines}">0</span>
+                                <span class="small">machines</span>
+                            </div>
+                        </div>
+                        <ul class="legend">
+                            <li><span class="dot" style="background:#22c55e"></span>Active<span class="cnt" th:text="${active}">0</span></li>
+                            <li><span class="dot" style="background:#f59e0b"></span>Under maint.<span class="cnt" th:text="${underMaintenance}">0</span></li>
+                            <li><span class="dot" style="background:#ef4444"></span>Down<span class="cnt" th:text="${down}">0</span></li>
+                            <li><span class="dot" style="background:#9ca3af"></span>Inactive<span class="cnt" th:text="${inactive}">0</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Open requests by priority -->
+                <div class="panel">
+                    <h3 class="chart-title">Open requests by priority</h3>
+                    <div class="hbar"><div class="hbar-top"><span>Critical</span><strong th:text="${critical}">0</strong></div>
+                        <div class="hbar-track"><div class="hbar-fill" th:style="'background:#ef4444;width:' + ${pctCritical} + '%'"></div></div></div>
+                    <div class="hbar"><div class="hbar-top"><span>High</span><strong th:text="${high}">0</strong></div>
+                        <div class="hbar-track"><div class="hbar-fill" th:style="'background:#f97316;width:' + ${pctHigh} + '%'"></div></div></div>
+                    <div class="hbar"><div class="hbar-top"><span>Medium</span><strong th:text="${medium}">0</strong></div>
+                        <div class="hbar-track"><div class="hbar-fill" th:style="'background:#f59e0b;width:' + ${pctMedium} + '%'"></div></div></div>
+                    <div class="hbar"><div class="hbar-top"><span>Low</span><strong th:text="${low}">0</strong></div>
+                        <div class="hbar-track"><div class="hbar-fill" th:style="'background:#22c55e;width:' + ${pctLow} + '%'"></div></div></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h2>Recent maintenance</h2>
+                    <a th:href="@{/maintenance}">View all →</a>
+                </div>
+                <table class="table-clean" th:if="${not #lists.isEmpty(recent)}">
+                    <thead><tr><th>ID</th><th>Machine</th><th>Problem</th><th>Priority</th><th>Technician</th><th>Status</th></tr></thead>
+                    <tbody>
+                    <tr th:each="m : ${recent}">
+                        <td><a th:href="@{/maintenance/{id}(id=${m.id})}" th:text="'#' + ${m.id}">#1</a></td>
+                        <td th:text="${machineLabels[m.machineId] ?: ('Machine #' + m.machineId)}">MC-001</td>
+                        <td th:text="${#strings.abbreviate(m.description, 40)}">Oil leak</td>
+                        <td><span class="badge" th:classappend="${'pr-' + m.priority}" th:text="${m.priority}">HIGH</span></td>
+                        <td th:text="${m.assignedTo} ?: 'Unassigned'">tech1</td>
+                        <td><span class="badge" th:classappend="${'st-' + m.status}" th:text="${m.status}">PENDING</span></td>
+                    </tr>
+                    </tbody>
+                </table>
+                <div class="empty" th:if="${#lists.isEmpty(recent)}">No maintenance requests yet.</div>
+            </div>
+        </th:block>
+
+        <!-- ======================================================= -->
+        <!--  TECHNICIAN DASHBOARD - only my own jobs                 -->
+        <!-- ======================================================= -->
+        <th:block th:if="${isTechnician}">
+
+            <div class="kpis">
+                <div class="kpi"><div class="icon ic-amber">🕒</div>
+                    <div><div class="num" id="stat-my-pending" th:text="${myPending}">0</div><div class="lbl">Pending</div></div></div>
+                <div class="kpi"><div class="icon ic-blue">⚙️</div>
+                    <div><div class="num" th:text="${myInProgress}">0</div><div class="lbl">In progress</div></div></div>
+                <div class="kpi"><div class="icon ic-green">✅</div>
+                    <div><div class="num" th:text="${myCompleted}">0</div><div class="lbl">Completed</div></div></div>
+                <div class="kpi"><div class="icon ic-red">⏰</div>
+                    <div><div class="num" th:text="${myOverdue}">0</div><div class="lbl">Overdue</div></div></div>
+            </div>
+
+            <div class="grid-2">
+                <div class="panel">
+                    <h3 class="chart-title">My job status</h3>
+                    <div class="donut-wrap">
+                        <div class="donut" th:style="'background:' + ${myDonut}">
+                            <div class="donut-center">
+                                <span class="big" th:text="${myCompletionRate} + '%'">0%</span>
+                                <span class="small">done</span>
+                            </div>
+                        </div>
+                        <ul class="legend">
+                            <li><span class="dot" style="background:#f59e0b"></span>Pending<span class="cnt" th:text="${myPending}">0</span></li>
+                            <li><span class="dot" style="background:#3b82f6"></span>In progress<span class="cnt" th:text="${myInProgress}">0</span></li>
+                            <li><span class="dot" style="background:#22c55e"></span>Completed<span class="cnt" th:text="${myCompleted}">0</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <h2>My active jobs</h2>
+                        <a th:href="@{/maintenance}">All my jobs →</a>
+                    </div>
+                    <table class="table-clean" th:if="${not #lists.isEmpty(myActive)}">
+                        <thead><tr><th>ID</th><th>Machine</th><th>Problem</th><th>Due</th><th>Status</th></tr></thead>
+                        <tbody>
+                        <tr th:each="m : ${myActive}">
+                            <td><a th:href="@{/maintenance/{id}(id=${m.id})}" th:text="'#' + ${m.id}">#1</a></td>
+                            <td th:text="${machineLabels[m.machineId] ?: ('Machine #' + m.machineId)}">MC-001</td>
+                            <td th:text="${#strings.abbreviate(m.description, 35)}">Oil leak</td>
+                            <td th:text="${m.dueDate}"
+                                th:classappend="${m.dueDate != null and m.dueDate.isBefore(today)} ? 'overdue'">2026-10-10</td>
+                            <td><span class="badge" th:classappend="${'st-' + m.status}" th:text="${m.status}">PENDING</span></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <div class="empty" th:if="${#lists.isEmpty(myActive)}">🎉 No active jobs assigned to you.</div>
+                </div>
+            </div>
+        </th:block>
+    </main>
+</div>
+</body>
+</html>

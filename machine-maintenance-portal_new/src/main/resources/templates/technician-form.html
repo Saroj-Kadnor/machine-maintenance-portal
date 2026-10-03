@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Add Technician')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('technicians')}"></aside>
+
+    <main class="content">
+        <h1 class="page-title">Add Technician</h1>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+
+        <div class="panel form-panel">
+            <p class="hint"><span class="req">*</span> Required field</p>
+
+            <form th:action="@{/technicians/save}" method="post">
+
+                <label for="fullName">Full Name <span class="req">*</span></label>
+                <input type="text" id="fullName" name="fullName" th:value="${fullName}"
+                       placeholder="e.g. Ravi Kumar" required>
+
+                <label for="username">Username <span class="req">*</span></label>
+                <input type="text" id="username" name="username" th:value="${username}"
+                       placeholder="e.g. ravi_k" required minlength="3" maxlength="30"
+                       pattern="[A-Za-z0-9_]{3,30}"
+                       title="3-30 characters: letters, numbers or underscore">
+                <div class="hint">Letters, numbers and underscore only. Used to log in.</div>
+
+                <label for="password">Password <span class="req">*</span></label>
+                <input type="password" id="password" name="password" required minlength="6"
+                       autocomplete="new-password">
+                <div class="hint">At least 6 characters.</div>
+
+                <label for="confirmPassword">Confirm Password <span class="req">*</span></label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required
+                       minlength="6" autocomplete="new-password">
+
+                <div class="form-actions">
+                    <button type="submit" id="save-technician-btn" class="btn">Add Technician</button>
+                    <a th:href="@{/technicians}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

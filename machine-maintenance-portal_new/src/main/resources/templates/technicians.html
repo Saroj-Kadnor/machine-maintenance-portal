@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Technicians')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('technicians')}"></aside>
+
+    <main class="content">
+        <h1 class="page-title">Technicians</h1>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+
+        <div class="panel">
+            <div class="toolbar">
+                <span></span>
+                <a th:href="@{/technicians/add}" id="add-technician-btn" class="btn" th:if="${isAdmin}">+ Add Technician</a>
+            </div>
+            <table th:if="${not #lists.isEmpty(technicians)}">
+                <thead><tr><th>Name</th><th>Username</th><th>Open jobs</th><th>Completed</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="t : ${technicians}">
+                    <td th:text="${t.fullName}"></td>
+                    <td th:text="${t.username}"></td>
+                    <td th:text="${openJobs[t.username]}">0</td>
+                    <td th:text="${completedJobs[t.username]}">0</td>
+                    <td><a th:href="@{/maintenance(technician=${t.username})}" class="btn btn-sm btn-secondary">View jobs</a></td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="empty" th:if="${#lists.isEmpty(technicians)}">No technicians found.</div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' | Machine Maintenance Portal'">Portal</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+
+<body>
+
+<aside class="sidebar" th:fragment="sidebar(active)">
+    <div class="brand">🏭 Maintenance Portal</div>
+
+    <nav>
+        <a th:href="@{/}" id="nav-dashboard"
+           th:classappend="${active == 'dashboard'} ? 'active'">🏠 Dashboard</a>
+        <a th:href="@{/machines}" id="nav-machines" th:unless="${isTechnician}"
+           th:classappend="${active == 'machines'} ? 'active'">🏭 Machines</a>
+        <a th:href="@{/maintenance}" id="nav-maintenance"
+           th:classappend="${active == 'maintenance'} ? 'active'"
+           th:text="${isTechnician} ? '🔧 My Jobs' : '🔧 Maintenance'">🔧 Maintenance</a>
+        <a th:href="@{/technicians}" id="nav-technicians" th:if="${canManage}"
+           th:classappend="${active == 'technicians'} ? 'active'">👨‍🔧 Technicians</a>
+    </nav>
+
+    <div class="user-box">
+        <div class="user-name" th:text="${displayName}">User</div>
+        <div class="role" th:text="${#strings.toLowerCase(currentRole)}">role</div>
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" id="logout-btn" class="btn-link">🚪 Logout</button>
+        </form>
+    </div>
+</aside>
+
+<div th:fragment="flash">
+    <div class="alert success" th:if="${success}" th:text="${success}"></div>
+    <div class="alert error" th:if="${error}" th:text="${error}"></div>
+</div>
+
+</body>
+</html>

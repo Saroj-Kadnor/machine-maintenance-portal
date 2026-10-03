@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Maintenance Details')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('maintenance')}"></aside>
+
+    <main class="content">
+        <h1 class="page-title" th:text="'Maintenance Request #' + ${maintenance.id}">Request</h1>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+
+        <div class="panel">
+            <dl class="detail-grid">
+                <dt>Machine</dt>
+                <dd>
+                    <a th:if="${machine != null}" th:href="@{/machines/{id}(id=${machine.id})}"
+                       th:text="${machine.machineCode + ' - ' + machine.machineName}"></a>
+                    <span th:if="${machine == null}" th:text="'Machine #' + ${maintenance.machineId}"></span>
+                </dd>
+                <dt>Problem</dt><dd th:text="${maintenance.description}"></dd>
+                <dt>Priority</dt>
+                <dd><span class="badge" th:classappend="${'pr-' + maintenance.priority}" th:text="${maintenance.priority}"></span></dd>
+                <dt>Status</dt>
+                <dd><span class="badge" th:classappend="${'st-' + maintenance.status}" th:text="${maintenance.status}"></span></dd>
+                <dt>Assigned Technician</dt><dd th:text="${technicianName} ?: 'Unassigned'"></dd>
+                <dt>Due Date</dt><dd th:text="${maintenance.dueDate}"></dd>
+                <dt>Remarks</dt><dd th:text="${maintenance.remarks}"></dd>
+                <dt>Created</dt><dd th:text="${#temporals.format(maintenance.createdDate, 'dd MMM yyyy HH:mm')}"></dd>
+                <dt>Last Updated</dt><dd th:text="${#temporals.format(maintenance.updatedDate, 'dd MMM yyyy HH:mm')}"></dd>
+            </dl>
+
+            <div class="form-actions">
+                <a th:href="@{/maintenance/edit/{id}(id=${maintenance.id})}" class="btn" th:if="${canEdit}">Edit</a>
+
+                <form th:each="s : ${actions}" class="inline" method="post"
+                      th:action="@{/maintenance/{id}/status(id=${maintenance.id})}">
+                    <input type="hidden" name="newStatus" th:value="${s}">
+                    <input type="hidden" name="from" value="detail">
+                    <button type="submit" class="btn"
+                            th:classappend="${s == 'COMPLETED'} ? 'btn-success' : (${s == 'CANCELLED'} ? 'btn-danger' : '')"
+                            th:text="${s == 'IN_PROGRESS'} ? 'Start work' : (${s == 'COMPLETED'} ? 'Mark completed' : 'Cancel request')">Go</button>
+                </form>
+
+                <a th:href="@{/maintenance}" class="btn btn-secondary">← Back</a>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

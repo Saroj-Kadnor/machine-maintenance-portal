@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Maintenance')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('maintenance')}"></aside>
+
+    <main class="content">
+        <h1 class="page-title" th:text="${isTechnician} ? 'My Jobs' : 'Maintenance Management'">Maintenance Management</h1>
+        <div th:replace="~{fragments/layout :: flash}"></div>
+
+        <div class="panel">
+            <div class="toolbar">
+                <form th:action="@{/maintenance}" method="get" class="filters">
+                    <input type="text" id="search" name="search" th:value="${search}"
+                           th:placeholder="${isTechnician} ? 'Search my jobs...' : 'Search ID, problem, machine, technician...'">
+
+                    <select name="status">
+                        <option value="">All statuses</option>
+                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"
+                                th:selected="${s == status}"></option>
+                    </select>
+
+                    <select name="priority">
+                        <option value="">All priorities</option>
+                        <option th:each="p : ${priorities}" th:value="${p}" th:text="${p}"
+                                th:selected="${p == priority}"></option>
+                    </select>
+
+                    <select name="technician" th:unless="${isTechnician}">
+                        <option value="">All technicians</option>
+                        <option th:each="t : ${technicians}" th:value="${t.username}" th:text="${t.fullName}"
+                                th:selected="${t.username == technician}"></option>
+                    </select>
+
+                    <button type="submit" id="search-btn" class="btn">Search</button>
+                    <a th:href="@{/maintenance}" class="btn btn-secondary">Reset</a>
+                </form>
+
+                <a th:href="@{/maintenance/add}" id="add-maintenance-btn" class="btn" th:if="${canManage}">+ New Request</a>
+            </div>
+
+            <table th:if="${not #lists.isEmpty(maintenanceList)}" id="maintenance-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Machine</th>
+                    <th>Problem</th>
+                    <th>Priority</th>
+                    <th>Technician</th>
+                    <th>Due</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${maintenanceList}">
+                    <td><a th:href="@{/maintenance/{id}(id=${m.id})}" th:text="'#' + ${m.id}"></a></td>
+                    <td th:text="${machineLabels[m.machineId] ?: ('Machine #' + m.machineId)}"></td>
+                    <td th:text="${#strings.abbreviate(m.description, 50)}"></td>
+                    <td><span class="badge" th:classappend="${'pr-' + m.priority}" th:text="${m.priority}"></span></td>
+                    <td th:text="${m.assignedTo} ?: 'Unassigned'"></td>
+                    <td th:text="${m.dueDate}"></td>
+                    <td><span class="badge" th:classappend="${'st-' + m.status}" th:text="${m.status}"></span></td>
+                    <td class="actions">
+                        <a th:href="@{/maintenance/{id}(id=${m.id})}" class="btn btn-sm btn-secondary">View</a>
+                        <a th:href="@{/maintenance/edit/{id}(id=${m.id})}" class="btn btn-sm"
+                           th:if="${canManage or (isTechnician and m.assignedTo == currentUsername)}">Edit</a>
+
+                        <form th:each="s : ${actions[m.id]}" class="inline" method="post"
+                              th:action="@{/maintenance/{id}/status(id=${m.id})}">
+                            <input type="hidden" name="newStatus" th:value="${s}">
+                            <button type="submit" class="btn btn-sm"
+                                    th:classappend="${s == 'COMPLETED'} ? 'btn-success' : (${s == 'CANCELLED'} ? 'btn-danger' : '')"
+                                    th:text="${s == 'IN_PROGRESS'} ? 'Start' : (${s == 'COMPLETED'} ? 'Complete' : 'Cancel')">Go</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="empty" th:if="${#lists.isEmpty(maintenanceList)}">No maintenance records found.</div>
+        </div>
+    </main>
+</div>
+</body>
+</html>
