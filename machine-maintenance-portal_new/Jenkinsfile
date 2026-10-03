@@ -1,0 +1,98 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'DEPLOY_PORT', defaultValue: '8081',
+               description: 'Port the deployed app listens on')
+        string(name: 'DB_URL', defaultValue: 'jdbc:mysql://localhost:3306/machine_maintenance',
+               description: 'JDBC URL the deployed app connects to')
+    }
+
+    environment {
+        APP_DIR    = 'machine-maintenance-portal_new'
+        DEPLOY_DIR = 'C:/deploy/machine-portal'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir("${env.APP_DIR}") {
+                    bat 'mvnw.cmd -B clean compile'
+                }
+            }
+        }
+
+        stage('Package') {
+            steps {
+                dir("${env.APP_DIR}") {
+                    bat 'mvnw.cmd -B package'
+                }
+                archiveArtifacts artifacts: "${env.APP_DIR}/target/*.jar", fingerprint: true
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                // These two variables stop Jenkins killing the app when the build finishes
+                withEnv(['JENKINS_NODE_COOKIE=dontKillMe', 'BUILD_ID=dontKillMe']) {
+                    powershell '''
+                        $ErrorActionPreference = "Stop"
+                        $deployDir = $env:DEPLOY_DIR
+                        $port = $env:DEPLOY_PORT
+                        New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
+
+                        # 1. Stop the old version if it is running on this port
+                        $old = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+                        if ($old) {
+                            $old | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+                            Start-Sleep -Seconds 3
+                        }
+
+                        # 2. Copy the new jar into the deploy folder
+                        $jar = Get-ChildItem "$env:WORKSPACE/$env:APP_DIR/target/*.jar" | Select-Object -First 1
+                        Copy-Item $jar.FullName "$deployDir/machine-portal.jar" -Force
+
+                        # 3. Start it in the background
+                        if ($env:JAVA_HOME) { $javaExe = "$env:JAVA_HOME/bin/java.exe" } else { $javaExe = "java" }
+                        Start-Process -FilePath $javaExe `
+                            -ArgumentList "-jar", "$deployDir/machine-portal.jar", "--server.port=$port" `
+                            -WorkingDirectory $deployDir -WindowStyle Hidden `
+                            -RedirectStandardOutput "$deployDir/app.log" `
+                            -RedirectStandardError "$deployDir/app-error.log"
+                        Write-Host "Started application on port $port using DB $env:DB_URL"
+                    '''
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                powershell '''
+                    $url = "http://localhost:$($env:DEPLOY_PORT)/login"
+                    $ok = $false
+                    for ($i = 1; $i -le 30; $i++) {
+                        try {
+                            $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 3
+                            if ($r.StatusCode -eq 200) { $ok = $true; break }
+                        } catch { Start-Sleep -Seconds 3 }
+                    }
+                    if (-not $ok) { Write-Host "Application did not start in time"; exit 1 }
+                    Write-Host "Application is UP at $url"
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            junit testResults: "${env.APP_DIR}/target/surefire-reports/*.xml", allowEmptyResults: true
+        }
+    }
+}
