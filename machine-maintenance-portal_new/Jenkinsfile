@@ -29,25 +29,41 @@ def stopApp(String port) {
 }
 
 def startApp(String port) {
-    // JENKINS_NODE_COOKIE / BUILD_ID stop Jenkins killing the app when this build step ends
-    withEnv(["TARGET_PORT=${port}", 'JENKINS_NODE_COOKIE=dontKillMe', 'BUILD_ID=dontKillMe']) {
+    withEnv(["TARGET_PORT=${port}"]) {
         powershell '''
             $ErrorActionPreference = "Stop"
             $port = [int]$env:TARGET_PORT
-            $deployDir = $env:DEPLOY_DIR
+            $deployDir = ($env:DEPLOY_DIR -replace '/', '\\')
             New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
 
-            $jar = Get-ChildItem "$env:WORKSPACE/$env:APP_DIR/target/*.jar" | Where-Object { $_.Name -notlike "*.original" } | Select-Object -First 1
-            $target = "$deployDir/machine-portal-$port.jar"
-            Copy-Item $jar.FullName $target -Force
+            $jarName = "machine-portal-$port.jar"
+            $logFile = "app-$port.log"
+            $batFile = "run-$port.bat"
 
-            if ($env:JAVA_HOME) { $javaExe = "$env:JAVA_HOME/bin/java.exe" } else { $javaExe = "java" }
-            Start-Process -FilePath $javaExe `
-                -ArgumentList "-jar", $target, "--server.port=$port" `
-                -WorkingDirectory $deployDir -WindowStyle Hidden `
-                -RedirectStandardOutput "$deployDir/app-$port.log" `
-                -RedirectStandardError "$deployDir/app-$port-error.log"
+            # 1. Copy the new jar into the deploy folder
+            $jar = Get-ChildItem "$env:WORKSPACE/$env:APP_DIR/target/*.jar" | Where-Object { $_.Name -notlike "*.original" } | Select-Object -First 1
+            Copy-Item $jar.FullName "$deployDir\\$jarName" -Force
+            Remove-Item "$deployDir\\$logFile" -Force -ErrorAction SilentlyContinue
+
+            # 2. Write a small start script (it carries the DB setting into the app)
+            if ($env:JAVA_HOME) { $javaExe = "$env:JAVA_HOME\\bin\\java.exe" } else { $javaExe = (Get-Command java).Source }
+            $lines = @(
+                "@echo off",
+                "cd /d `"$deployDir`"",
+                "set DB_URL=$env:DB_URL",
+                "`"$javaExe`" -jar `"$deployDir\\$jarName`" --server.port=$port > `"$deployDir\\$logFile`" 2>&1"
+            )
+            Set-Content -Path "$deployDir\\$batFile" -Value $lines -Encoding ASCII
+
+            # 3. Launch it through Windows (WMI) so it is completely detached from Jenkins
+            $result = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
+                CommandLine      = "cmd.exe /c `"$deployDir\\$batFile`""
+                CurrentDirectory = $deployDir
+            }
+            if ($result.ReturnValue -ne 0) { Write-Host "Could not launch app, WMI code $($result.ReturnValue)"; exit 1 }
+
             Write-Host "Started application on port $port using DB $env:DB_URL"
+            exit 0
         '''
     }
 }
