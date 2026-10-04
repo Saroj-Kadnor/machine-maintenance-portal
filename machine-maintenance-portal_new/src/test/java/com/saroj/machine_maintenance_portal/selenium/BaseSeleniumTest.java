@@ -1,5 +1,8 @@
 package com.saroj.machine_maintenance_portal.selenium;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.time.LocalDate;
 
@@ -49,9 +52,10 @@ public abstract class BaseSeleniumTest {
         switch (browser) {
             case "chrome" -> {
                 ChromeOptions options = new ChromeOptions();
-                options.addArguments("--window-size=1400,1000");
+                options.addArguments("--window-size=1400,1000", "--remote-allow-origins=*");
                 if (headless) {
-                    options.addArguments("--headless=new");
+                    options.addArguments("--headless=new", "--no-sandbox", "--disable-gpu",
+                            "--disable-dev-shm-usage", "--user-data-dir=" + tempProfileDir());
                 }
                 driver = new ChromeDriver(options);
             }
@@ -65,14 +69,25 @@ public abstract class BaseSeleniumTest {
             }
             default -> {
                 EdgeOptions options = new EdgeOptions();
-                options.addArguments("--window-size=1400,1000");
+                options.addArguments("--window-size=1400,1000", "--remote-allow-origins=*");
                 if (headless) {
-                    options.addArguments("--headless=new");
+                    // extra flags make headless Edge work when Jenkins runs as a Windows service
+                    options.addArguments("--headless=new", "--no-sandbox", "--disable-gpu",
+                            "--disable-dev-shm-usage", "--user-data-dir=" + tempProfileDir());
                 }
                 driver = new EdgeDriver(options);
             }
         }
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+    }
+
+    /** A throw-away browser profile folder, so Jenkins' service account never needs a real user profile. */
+    private static String tempProfileDir() {
+        try {
+            return Files.createTempDirectory("selenium-profile").toString();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @AfterEach

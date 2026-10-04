@@ -1,9 +1,82 @@
+// ======================================================================
+//  Machine Maintenance Portal - CI/CD pipeline
+//
+//  Checkout -> Build -> Package (unit tests) -> Deploy to Test (port 8090)
+//  -> Selenium Tests (against the test copy) -> Deploy (real port 8081)
+//  -> Health Check
+//
+//  If any Selenium test fails, the pipeline stops and the real
+//  deployment on 8081 is NOT touched.
+// ======================================================================
+
+// ---------- helper functions ----------
+
+def stopApp(String port) {
+    withEnv(["TARGET_PORT=${port}"]) {
+        powershell '''
+            $port = [int]$env:TARGET_PORT
+            $old = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+            if ($old) {
+                $old | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+                Start-Sleep -Seconds 3
+                Write-Host "Stopped application on port $port"
+            } else {
+                Write-Host "Nothing running on port $port"
+            }
+            exit 0
+        '''
+    }
+}
+
+def startApp(String port) {
+    // JENKINS_NODE_COOKIE / BUILD_ID stop Jenkins killing the app when this build step ends
+    withEnv(["TARGET_PORT=${port}", 'JENKINS_NODE_COOKIE=dontKillMe', 'BUILD_ID=dontKillMe']) {
+        powershell '''
+            $ErrorActionPreference = "Stop"
+            $port = [int]$env:TARGET_PORT
+            $deployDir = $env:DEPLOY_DIR
+            New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
+
+            $jar = Get-ChildItem "$env:WORKSPACE/$env:APP_DIR/target/*.jar" | Where-Object { $_.Name -notlike "*.original" } | Select-Object -First 1
+            $target = "$deployDir/machine-portal-$port.jar"
+            Copy-Item $jar.FullName $target -Force
+
+            if ($env:JAVA_HOME) { $javaExe = "$env:JAVA_HOME/bin/java.exe" } else { $javaExe = "java" }
+            Start-Process -FilePath $javaExe `
+                -ArgumentList "-jar", $target, "--server.port=$port" `
+                -WorkingDirectory $deployDir -WindowStyle Hidden `
+                -RedirectStandardOutput "$deployDir/app-$port.log" `
+                -RedirectStandardError "$deployDir/app-$port-error.log"
+            Write-Host "Started application on port $port using DB $env:DB_URL"
+        '''
+    }
+}
+
+def waitForApp(String port) {
+    withEnv(["TARGET_PORT=${port}"]) {
+        powershell '''
+            $url = "http://localhost:$($env:TARGET_PORT)/login"
+            $ok = $false
+            for ($i = 1; $i -le 30; $i++) {
+                try {
+                    $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 3
+                    if ($r.StatusCode -eq 200) { $ok = $true; break }
+                } catch { Start-Sleep -Seconds 3 }
+            }
+            if (-not $ok) { Write-Host "Application did not start in time: $url"; exit 1 }
+            Write-Host "Application is UP at $url"
+        '''
+    }
+}
+
+// ---------- pipeline ----------
+
 pipeline {
     agent any
 
     parameters {
         string(name: 'DEPLOY_PORT', defaultValue: '8081',
-               description: 'Port the deployed app listens on')
+               description: 'Port the real (deployed) app listens on')
         string(name: 'DB_URL', defaultValue: 'jdbc:mysql://localhost:3306/machine_maintenance',
                description: 'JDBC URL the deployed app connects to')
     }
@@ -11,6 +84,8 @@ pipeline {
     environment {
         APP_DIR    = 'machine-maintenance-portal_new'
         DEPLOY_DIR = 'C:/deploy/machine-portal'
+        TEST_PORT  = '8090'
+        PROD_PORT  = "${params.DEPLOY_PORT ?: '8081'}"
     }
 
     stages {
@@ -38,54 +113,32 @@ pipeline {
             }
         }
 
+        stage('Deploy to Test') {
+            steps {
+                stopApp(env.TEST_PORT)
+                startApp(env.TEST_PORT)
+                waitForApp(env.TEST_PORT)
+            }
+        }
+
+        stage('Selenium Tests') {
+            steps {
+                dir("${env.APP_DIR}") {
+                    bat "mvnw.cmd -B test -Pselenium -DbaseUrl=http://localhost:${env.TEST_PORT} -Dwebdriver.edge.driver=C:/WebDriver/msedgedriver.exe -Dheadless=true"
+                }
+            }
+        }
+
         stage('Deploy') {
             steps {
-                // These two variables stop Jenkins killing the app when the build finishes
-                withEnv(['JENKINS_NODE_COOKIE=dontKillMe', 'BUILD_ID=dontKillMe']) {
-                    powershell '''
-                        $ErrorActionPreference = "Stop"
-                        $deployDir = $env:DEPLOY_DIR
-                        $port = $env:DEPLOY_PORT
-                        New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
-
-                        # 1. Stop the old version if it is running on this port
-                        $old = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
-                        if ($old) {
-                            $old | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
-                            Start-Sleep -Seconds 3
-                        }
-
-                        # 2. Copy the new jar into the deploy folder
-                        $jar = Get-ChildItem "$env:WORKSPACE/$env:APP_DIR/target/*.jar" | Select-Object -First 1
-                        Copy-Item $jar.FullName "$deployDir/machine-portal.jar" -Force
-
-                        # 3. Start it in the background
-                        if ($env:JAVA_HOME) { $javaExe = "$env:JAVA_HOME/bin/java.exe" } else { $javaExe = "java" }
-                        Start-Process -FilePath $javaExe `
-                            -ArgumentList "-jar", "$deployDir/machine-portal.jar", "--server.port=$port" `
-                            -WorkingDirectory $deployDir -WindowStyle Hidden `
-                            -RedirectStandardOutput "$deployDir/app.log" `
-                            -RedirectStandardError "$deployDir/app-error.log"
-                        Write-Host "Started application on port $port using DB $env:DB_URL"
-                    '''
-                }
+                stopApp(env.PROD_PORT)
+                startApp(env.PROD_PORT)
             }
         }
 
         stage('Health Check') {
             steps {
-                powershell '''
-                    $url = "http://localhost:$($env:DEPLOY_PORT)/login"
-                    $ok = $false
-                    for ($i = 1; $i -le 30; $i++) {
-                        try {
-                            $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 3
-                            if ($r.StatusCode -eq 200) { $ok = $true; break }
-                        } catch { Start-Sleep -Seconds 3 }
-                    }
-                    if (-not $ok) { Write-Host "Application did not start in time"; exit 1 }
-                    Write-Host "Application is UP at $url"
-                '''
+                waitForApp(env.PROD_PORT)
             }
         }
     }
@@ -93,6 +146,9 @@ pipeline {
     post {
         always {
             junit testResults: "${env.APP_DIR}/target/surefire-reports/*.xml", allowEmptyResults: true
+            archiveArtifacts artifacts: "${env.APP_DIR}/target/screenshots/*.png", allowEmptyArchive: true
+            // the temporary test copy is always shut down
+            stopApp(env.TEST_PORT)
         }
     }
 }
