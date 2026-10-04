@@ -7,7 +7,7 @@
         <h1>🏭 Machine Maintenance Portal</h1>
         <p>Please sign in to continue.</p>
 
-        <div class="alert error" th:if="${param.error}">Wrong credentials.</div>
+        <div class="alert error" th:if="${param.error}">Invalid username or password.</div>
         <div class="alert success" th:if="${param.logout}">You have been logged out.</div>
 
         <form th:action="@{/login}" method="post">
