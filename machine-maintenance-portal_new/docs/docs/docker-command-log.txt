@@ -1,0 +1,39 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261004213523
+Username: SAROJ\saheb
+RunAs User: SAROJ\saheb
+Configuration Name: 
+Machine: SAROJ (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -noexit -command try { . "c:\Users\saheb\AppData\Local\Programs\Microsoft VS Code\07f806f999\resources\app\out\vs\workbench\contrib\terminal\common\scripts\shellIntegration.ps1" } catch {}
+Process ID: 25424
+PSVersion: 5.1.26100.9444
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9444
+BuildVersion: 10.0.26100.9444
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is .\docs\docker-command-log.txt
+]633;D;0]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_new\x5cdocsPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new\docs> ]633;B
+PS>docker --version
+docker : The term 'docker' is not recognized as the name of a cmdlet, function, script file, or operable program. Check 
+the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ docker --version
++ ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (docker:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+docker : The term 'docker' is not recognized as the name of a cmdlet, function,
+script file, or operable program. Check the spelling of the name, or if a path
+was included, verify that the path is correct and try again.
+At line:1 char:1
++ docker --version
++ ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (docker:String) [], CommandNotFound
+   Exception
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+]633;D;1]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_new\x5cdocsPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new\docs> ]633;B

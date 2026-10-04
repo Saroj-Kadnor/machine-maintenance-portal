@@ -1,0 +1,142 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261004214833
+Username: SAROJ\saheb
+RunAs User: SAROJ\saheb
+Configuration Name: 
+Machine: SAROJ (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -noexit -command try { . "c:\Users\saheb\AppData\Local\Programs\Microsoft VS Code\07f806f999\resources\app\out\vs\workbench\contrib\terminal\common\scripts\shellIntegration.ps1" } catch {}
+Process ID: 10376
+PSVersion: 5.1.26100.9444
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9444
+BuildVersion: 10.0.26100.9444
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is docs\docker-command-log.txt
+]633;D;0]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_newPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new> ]633;B
+PS>FROM eclipse-temurin:21-jre
+
+# run as a normal user, not root
+RUN groupadd -r portal && useradd -r -g portal portal
+
+WORKDIR /app
+COPY target/*.jar app.jar
+RUN chown portal:portal /app/app.jar
+USER portal
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+At line:1 char:1
++ FROM eclipse-temurin:21-jre
++ ~~~~
+The 'from' keyword is not supported in this version of the language.
+
+At line:4 char:24
++ RUN groupadd -r portal && useradd -r -g portal portal
++                        ~~
+The token '&&' is not a valid statement separator in this version.
+At line:1 char:1
++ FROM eclipse-temurin:21-jre
++ ~~~~
+The 'from' keyword is not supported in this version of the language.
+
+At line:4 char:24
++ RUN groupadd -r portal && useradd -r -g portal portal
++                        ~~
+The token '&&' is not a valid statement separator in this version.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : ReservedKeywordNotAllowed
+
+]633;D;0]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_newPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new> ]633;B
+PS>FROM eclipse-temurin:21-jre
+
+# run as a normal user, not root
+RUN groupadd -r portal && useradd -r -g portal portal
+
+WORKDIR /app
+COPY target/*.jar app.jar
+RUN chown portal:portal /app/app.jar
+USER portal
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+At line:1 char:1
++ FROM eclipse-temurin:21-jre
++ ~~~~
+The 'from' keyword is not supported in this version of the language.
+
+At line:4 char:24
++ RUN groupadd -r portal && useradd -r -g portal portal
++                        ~~
+The token '&&' is not a valid statement separator in this version.
+At line:1 char:1
++ FROM eclipse-temurin:21-jre
++ ~~~~
+The 'from' keyword is not supported in this version of the language.
+
+At line:4 char:24
++ RUN groupadd -r portal && useradd -r -g portal portal
++                        ~~
+The token '&&' is not a valid statement separator in this version.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : ReservedKeywordNotAllowed
+
+]633;D;0]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_newPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new> ]633;B
+PS>cd C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new
+docker build -t machine-maintenance-portal:local .
+
+]633;D;0]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_newPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new> ]633;B
+PS>cd C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new
+$dockerBin = Join-Path $env:LOCALAPPDATA 'Programs\DockerDesktop\resources\bin'
+$env:Path = "$dockerBin;$env:Path"
+Start-Transcript -Path docs\docker-command-log.txt -Append
+Transcript started, output file is docs\docker-command-log.txt
+]633;D;0]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_newPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new> ]633;B
+PS>.\mvnw.cmd -B -DskipTests package
+docker build -t machine-portal:1.0 .
+docker tag machine-portal:1.0 machine-portal:latest
+docker images machine-portal
+docker image inspect machine-portal:1.0 --format '{{.Id}} {{.Size}} {{.Config.ExposedPorts}}'
+docker history machine-portal:1.0
+
+
+
+
+
+
+]633;D;0]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_newPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new> ]633;B
+PS>docker ps
+docker logs --tail 20 portal-app
+docker exec portal-app whoami
+docker stats --no-stream portal-app
+docker inspect portal-app --format '{{.State.Status}} {{.NetworkSettings.Ports}}'
+
+docker stop portal-app
+docker ps -a
+docker start portal-app
+docker restart portal-app
+docker stop portal-app
+docker rm portal-app
+
+
+
+
+
+
+
+
+
+
+
+]633;D;0]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_newPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new> ]633;B
+PS>docker run -d --name portal-app --network portal-net -p 8085:8080 -e "DB_URL=jdbc:mysql://portal-db:3306/machine_maintenance?allowPublicKeyRetrieval=true&useSSL=false" -e DB_USERNAME=root -e DB_PASSWORD=rootpass machine-portal:1.0
+docker logs -f portal-app
+
+
+PS>TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+]633;D;1]633;A]633;P;Cwd=C:\x5cUsers\x5csaheb\x5cDownloads\x5cmachine-maintenance-portal-v2\x5cmachine-maintenance-portal_newPS C:\Users\saheb\Downloads\machine-maintenance-portal-v2\machine-maintenance-portal_new> ]633;B

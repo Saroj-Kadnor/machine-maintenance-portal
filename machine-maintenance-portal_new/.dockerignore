@@ -1,0 +1,5 @@
+.git
+target/screenshots
+target/surefire-reports
+target/classes
+target/test-classes
