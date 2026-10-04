@@ -1,0 +1,22 @@
+-------------------------------------------------------------------------------
+Test set: com.saroj.machine_maintenance_portal.selenium.WorkflowJourneyTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 22.33 s <<< FAILURE! -- in com.saroj.machine_maintenance_portal.selenium.WorkflowJourneyTest
+com.saroj.machine_maintenance_portal.selenium.WorkflowJourneyTest.technicianCannotCancelAssignedJob -- Time elapsed: 14.79 s <<< ERROR!
+org.openqa.selenium.TimeoutException: 
+Expected condition failed: waiting for visibility of element located by By.id: machineId (tried for 10 second(s) with 500 milliseconds interval)
+Build info: version: '4.19.1', revision: 'abe0ee07dc'
+System info: os.name: 'Windows 11', os.arch: 'amd64', os.version: '10.0', java.version: '21.0.12.1'
+Driver info: org.openqa.selenium.edge.EdgeDriver
+Capabilities {acceptInsecureCerts: false, browserName: MicrosoftEdge, browserVersion: 154.0.4258.53, fedcm:accounts: true, goog:processID: 26720, ms:edgeOptions: {debuggerAddress: localhost:54884}, msedge: {msedgedriverVersion: 154.0.4258.53 (5af6e80f702c..., userDataDir: C:\Users\saheb\AppData\Loca...}, networkConnectionEnabled: false, pageLoadStrategy: normal, platformName: windows, proxy: Proxy(), se:cdp: ws://localhost:54884/devtoo..., se:cdpVersion: 154.0.4258.53, setWindowRect: true, strictFileInteractability: false, timeouts: {implicit: 0, pageLoad: 300000, script: 30000}, unhandledPromptBehavior: dismiss and notify, webauthn:extension:cmtgKey: true, webauthn:extension:credBlob: true, webauthn:extension:largeBlob: true, webauthn:extension:minPinLength: true, webauthn:extension:prf: true, webauthn:virtualAuthenticators: true}
+Session ID: cd7525586ee3e0d9dafa14953d8d69df
+	at org.openqa.selenium.support.ui.WebDriverWait.timeoutException(WebDriverWait.java:84)
+	at org.openqa.selenium.support.ui.FluentWait.until(FluentWait.java:228)
+	at com.saroj.machine_maintenance_portal.selenium.BaseSeleniumTest.find(BaseSeleniumTest.java:94)
+	at com.saroj.machine_maintenance_portal.selenium.BaseSeleniumTest.createMaintenance(BaseSeleniumTest.java:151)
+	at com.saroj.machine_maintenance_portal.selenium.BaseSeleniumTest.createJobForTech1(BaseSeleniumTest.java:182)
+	at com.saroj.machine_maintenance_portal.selenium.WorkflowJourneyTest.technicianCannotCancelAssignedJob(WorkflowJourneyTest.java:40)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
