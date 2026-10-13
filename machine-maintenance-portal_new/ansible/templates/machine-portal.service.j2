@@ -1,0 +1,19 @@
+# Managed by Ansible - do not edit by hand
+[Unit]
+Description=Machine Maintenance Portal
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+User={{ app_user }}
+Group={{ app_group }}
+EnvironmentFile={{ env_dir }}/portal.env
+ExecStart=/usr/bin/java -jar {{ app_home }}/current/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:{{ log_dir }}/app.log
+StandardError=append:{{ log_dir }}/app.log
+
+[Install]
+WantedBy=multi-user.target

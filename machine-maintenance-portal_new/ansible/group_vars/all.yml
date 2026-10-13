@@ -1,0 +1,20 @@
+---
+# Packages
+java_package: openjdk-17-jre-headless
+
+# Application
+app_user: portal
+app_group: portal
+app_home: /opt/machine-portal
+app_version: "1.0.0"
+app_port: 8082
+env_dir: /etc/machine-portal
+log_dir: /var/log/machine-portal
+
+# Database (demo values - use ansible-vault for real secrets)
+db_name: machine_maintenance
+db_user: portal
+db_password: portalpass
+
+# Where the built jar is (override with -e app_jar_src=...)
+app_jar_src: /mnt/c/Users/saheb/Downloads/machine-maintenance-portal-v2/machine-maintenance-portal_new/target/machine-maintenance-portal-0.0.1-SNAPSHOT.jar

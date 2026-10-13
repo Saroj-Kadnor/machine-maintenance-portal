@@ -1,0 +1,162 @@
+---
+- name: Configure the Machine Maintenance Portal server
+  hosts: portal_servers
+  become: true
+
+  tasks:
+    # ---------- 0. pre-check ----------
+    - name: Check that the application jar exists
+      ansible.builtin.stat:
+        path: "{{ app_jar_src }}"
+      register: jar_file
+      become: false
+
+    - name: Stop early if the jar is missing
+      ansible.builtin.assert:
+        that: jar_file.stat.exists
+        fail_msg: "Jar not found at {{ app_jar_src }} - build it first or pass -e app_jar_src=/path/to/app.jar"
+
+    # ---------- 1. packages ----------
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - "{{ java_package }}"
+          - mysql-server
+          - python3-pymysql
+          - curl
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    # ---------- 2. database ----------
+    - name: Make sure MySQL is running and starts at boot
+      ansible.builtin.systemd:
+        name: mysql
+        state: started
+        enabled: true
+
+    - name: Create the application database
+      community.mysql.mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Check whether the application database user already exists
+      ansible.builtin.command:
+        argv:
+          - mysql
+          - -Nse
+          - "SELECT COUNT(*) FROM mysql.user WHERE User='{{ db_user }}' AND Host='localhost'"
+      register: db_user_exists
+      changed_when: false
+
+    - name: Create the application database user
+      ansible.builtin.command:
+        argv:
+          - mysql
+          - -e
+          - "CREATE USER '{{ db_user }}'@'localhost' IDENTIFIED WITH caching_sha2_password BY '{{ db_password }}'"
+      when: db_user_exists.stdout | trim == '0'
+      no_log: true
+
+    - name: Give the user access to the application database only
+      ansible.builtin.command:
+        argv:
+          - mysql
+          - -e
+          - "GRANT ALL PRIVILEGES ON `{{ db_name }}`.* TO '{{ db_user }}'@'localhost'"
+      when: db_user_exists.stdout | trim == '0'
+
+    # ---------- 3. user, group, folders ----------
+    - name: Create the application group
+      ansible.builtin.group:
+        name: "{{ app_group }}"
+        system: true
+
+    - name: Create the application user
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        group: "{{ app_group }}"
+        system: true
+        shell: /usr/sbin/nologin
+        home: "{{ app_home }}"
+        create_home: false
+
+    - name: Create application folders
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: "{{ app_group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "{{ app_home }}", owner: "{{ app_user }}", mode: "0755" }
+        - { path: "{{ app_home }}/releases", owner: "{{ app_user }}", mode: "0755" }
+        - { path: "{{ app_home }}/releases/{{ app_version }}", owner: "{{ app_user }}", mode: "0755" }
+        - { path: "{{ env_dir }}", owner: root, mode: "0750" }
+        - { path: "{{ log_dir }}", owner: "{{ app_user }}", mode: "0755" }
+
+    # ---------- 4. application files ----------
+    - name: Copy the jar into this version's release folder
+      ansible.builtin.copy:
+        src: "{{ app_jar_src }}"
+        dest: "{{ app_home }}/releases/{{ app_version }}/app.jar"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: "0644"
+      notify: Restart portal
+
+    - name: Point 'current' at this release
+      ansible.builtin.file:
+        src: "{{ app_home }}/releases/{{ app_version }}"
+        dest: "{{ app_home }}/current"
+        state: link
+      notify: Restart portal
+
+    - name: Write the environment file (database settings and port)
+      ansible.builtin.template:
+        src: portal.env.j2
+        dest: "{{ env_dir }}/portal.env"
+        owner: root
+        group: "{{ app_group }}"
+        mode: "0640"
+      notify: Restart portal
+
+    - name: Install the systemd service
+      ansible.builtin.template:
+        src: machine-portal.service.j2
+        dest: /etc/systemd/system/machine-portal.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart portal
+
+    # ---------- 5. service ----------
+    - name: Enable and start the portal service
+      ansible.builtin.systemd:
+        name: machine-portal
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    - name: Apply pending restarts now
+      ansible.builtin.meta: flush_handlers
+
+    # ---------- 6. health check ----------
+    - name: Wait until the portal answers on its port
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}/login"
+        status_code: 200
+      register: health
+      until: health.status == 200
+      retries: 30
+      delay: 5
+      changed_when: false
+      become: false
+
+  handlers:
+    - name: Restart portal
+      ansible.builtin.systemd:
+        name: machine-portal
+        state: restarted
+        daemon_reload: true
